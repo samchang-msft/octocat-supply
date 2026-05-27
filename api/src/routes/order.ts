@@ -102,7 +102,7 @@
 import express from 'express';
 import { Order } from '../models/order';
 import { getOrdersRepository } from '../repositories/ordersRepo';
-import { handleDatabaseError, NotFoundError } from '../utils/errors';
+import { NotFoundError } from '../utils/errors';
 
 const router = express.Router();
 
@@ -120,16 +120,22 @@ router.post('/', async (req, res, next) => {
 // Get all orders
 router.get('/', async (req, res, next) => {
   try {
-    const repo = await getOrdersRepository();
-    const orders = await repo.findAll();
+    const pageSize = req.query.pageSize === undefined ? 20 : Number(req.query.pageSize);
+    const page = req.query.page === undefined ? 0 : Number(req.query.page);
 
-    // Non-linear pattern example: duplicate destructuring in object
-    if (orders.length > 0) {
-      const { orderId: id, orderId: duplicateId } = orders[0];
-      console.log('Non-linear pattern in order routes:', id, duplicateId);
+    if (!Number.isInteger(pageSize) || pageSize <= 0 || pageSize > 100) {
+      res.status(400).send('Invalid pageSize');
+      return;
     }
 
-    res.json(orders);
+    if (!Number.isInteger(page) || page < 0) {
+      res.status(400).send('Invalid page');
+      return;
+    }
+
+    const repo = await getOrdersRepository();
+    const orders = await repo.findAll(pageSize, page);
+    res.json({ orders });
   } catch (error) {
     next(error);
   }
