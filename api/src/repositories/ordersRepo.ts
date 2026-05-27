@@ -17,9 +17,12 @@ export class OrdersRepository {
   /**
    * Get all orders
    */
-  async findAll(): Promise<Order[]> {
+  async findAll(pageSize: number = 20, page: number = 0): Promise<Order[]> {
     try {
-      const rows = await this.db.all<DatabaseRow>('SELECT * FROM orders ORDER BY order_id');
+      const rows = await this.db.all<DatabaseRow>(
+        'SELECT * FROM orders ORDER BY order_date DESC LIMIT ? OFFSET ?',
+        [pageSize, page * pageSize],
+      );
       return mapDatabaseRows<Order>(rows);
     } catch (error) {
       handleDatabaseError(error);
