@@ -27,6 +27,28 @@ export class SuppliersRepository {
   }
 
   /**
+   * Get paginated suppliers
+   */
+  async findAllPaginated(page: number, pageSize: number): Promise<{ data: Supplier[]; total: number }> {
+    try {
+      const offset = page * pageSize;
+      const [rows, countResult] = await Promise.all([
+        this.db.all<DatabaseRow>(
+          'SELECT * FROM suppliers ORDER BY supplier_id LIMIT ? OFFSET ?',
+          [pageSize, offset],
+        ),
+        this.db.get<{ total: number }>('SELECT COUNT(*) as total FROM suppliers'),
+      ]);
+      return {
+        data: mapDatabaseRows<Supplier>(rows).map(this.convertBooleanFields),
+        total: countResult?.total || 0,
+      };
+    } catch (error) {
+      handleDatabaseError(error);
+    }
+  }
+
+  /**
    * Get supplier by ID
    */
   async findById(id: number): Promise<Supplier | null> {

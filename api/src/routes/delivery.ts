@@ -168,9 +168,21 @@ router.post('/', async (req, res, next) => {
 // Get all deliveries
 router.get('/', async (req, res, next) => {
   try {
+    const pageSize = req.query.pageSize !== undefined ? parseInt(req.query.pageSize as string, 10) : 20;
+    const page = req.query.page !== undefined ? parseInt(req.query.page as string, 10) : 0;
+
+    if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
+      res.status(400).json({ error: 'Invalid pageSize: must be between 1 and 100' });
+      return;
+    }
+    if (isNaN(page) || page < 0) {
+      res.status(400).json({ error: 'Invalid page: must be 0 or greater' });
+      return;
+    }
+
     const repo = await getDeliveriesRepository();
-    const deliveries = await repo.findAll();
-    res.json(deliveries);
+    const result = await repo.findAllPaginated(page, pageSize);
+    res.json({ data: result.data, page, pageSize, total: result.total });
   } catch (error) {
     next(error);
   }

@@ -27,6 +27,28 @@ export class OrderDetailsRepository {
   }
 
   /**
+   * Get paginated order details
+   */
+  async findAllPaginated(page: number, pageSize: number): Promise<{ data: OrderDetail[]; total: number }> {
+    try {
+      const offset = page * pageSize;
+      const [rows, countResult] = await Promise.all([
+        this.db.all<DatabaseRow>(
+          'SELECT * FROM order_details ORDER BY order_detail_id LIMIT ? OFFSET ?',
+          [pageSize, offset],
+        ),
+        this.db.get<{ total: number }>('SELECT COUNT(*) as total FROM order_details'),
+      ]);
+      return {
+        data: mapDatabaseRows<OrderDetail>(rows),
+        total: countResult?.total || 0,
+      };
+    } catch (error) {
+      handleDatabaseError(error);
+    }
+  }
+
+  /**
    * Get order detail by ID
    */
   async findById(id: number): Promise<OrderDetail | null> {

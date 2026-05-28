@@ -27,6 +27,28 @@ export class HeadquartersRepository {
   }
 
   /**
+   * Get paginated headquarters
+   */
+  async findAllPaginated(page: number, pageSize: number): Promise<{ data: Headquarters[]; total: number }> {
+    try {
+      const offset = page * pageSize;
+      const [rows, countResult] = await Promise.all([
+        this.db.all<DatabaseRow>(
+          'SELECT * FROM headquarters ORDER BY headquarters_id LIMIT ? OFFSET ?',
+          [pageSize, offset],
+        ),
+        this.db.get<{ total: number }>('SELECT COUNT(*) as total FROM headquarters'),
+      ]);
+      return {
+        data: mapDatabaseRows<Headquarters>(rows),
+        total: countResult?.total || 0,
+      };
+    } catch (error) {
+      handleDatabaseError(error);
+    }
+  }
+
+  /**
    * Get headquarters by ID
    */
   async findById(id: number): Promise<Headquarters | null> {

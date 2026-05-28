@@ -27,6 +27,28 @@ export class ProductsRepository {
   }
 
   /**
+   * Get paginated products
+   */
+  async findAllPaginated(page: number, pageSize: number): Promise<{ data: Product[]; total: number }> {
+    try {
+      const offset = page * pageSize;
+      const [rows, countResult] = await Promise.all([
+        this.db.all<DatabaseRow>(
+          'SELECT * FROM products ORDER BY product_id LIMIT ? OFFSET ?',
+          [pageSize, offset],
+        ),
+        this.db.get<{ total: number }>('SELECT COUNT(*) as total FROM products'),
+      ]);
+      return {
+        data: mapDatabaseRows<Product>(rows),
+        total: countResult?.total || 0,
+      };
+    } catch (error) {
+      handleDatabaseError(error);
+    }
+  }
+
+  /**
    * Get product by ID
    */
   async findById(id: number): Promise<Product | null> {

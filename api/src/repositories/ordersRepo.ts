@@ -19,8 +19,30 @@ export class OrdersRepository {
    */
   async findAll(): Promise<Order[]> {
     try {
-      const rows = await this.db.all<DatabaseRow>('SELECT * FROM orders ORDER BY order_id');
+      const rows = await this.db.all<DatabaseRow>('SELECT * FROM orders ORDER BY order_date DESC');
       return mapDatabaseRows<Order>(rows);
+    } catch (error) {
+      handleDatabaseError(error);
+    }
+  }
+
+  /**
+   * Get paginated orders sorted by order date descending
+   */
+  async findAllPaginated(page: number, pageSize: number): Promise<{ data: Order[]; total: number }> {
+    try {
+      const offset = page * pageSize;
+      const [rows, countResult] = await Promise.all([
+        this.db.all<DatabaseRow>(
+          'SELECT * FROM orders ORDER BY order_date DESC LIMIT ? OFFSET ?',
+          [pageSize, offset],
+        ),
+        this.db.get<{ total: number }>('SELECT COUNT(*) as total FROM orders'),
+      ]);
+      return {
+        data: mapDatabaseRows<Order>(rows),
+        total: countResult?.total || 0,
+      };
     } catch (error) {
       handleDatabaseError(error);
     }
