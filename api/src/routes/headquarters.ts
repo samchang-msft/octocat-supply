@@ -159,6 +159,7 @@ import express from 'express';
 import { Headquarters } from '../models/headquarters';
 import { getHeadquartersRepository } from '../repositories/headquartersRepo';
 import { NotFoundError } from '../utils/errors';
+import { parsePaginationParams } from '../utils/pagination';
 
 const router = express.Router();
 
@@ -166,9 +167,13 @@ const router = express.Router();
 // Get all headquarters
 router.get('/', async (req, res, next) => {
   try {
+    const pagination = parsePaginationParams(req, res);
+    if (!pagination) return;
+    const { page, pageSize } = pagination;
+
     const repo = await getHeadquartersRepository();
-    const headquarters = await repo.findAll();
-    res.json(headquarters);
+    const result = await repo.findAllPaginated(page, pageSize);
+    res.json({ data: result.data, page, pageSize, total: result.total });
   } catch (error) {
     next(error);
   }

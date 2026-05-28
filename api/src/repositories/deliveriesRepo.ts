@@ -27,6 +27,28 @@ export class DeliveriesRepository {
   }
 
   /**
+   * Get paginated deliveries
+   */
+  async findAllPaginated(page: number, pageSize: number): Promise<{ data: Delivery[]; total: number }> {
+    try {
+      const offset = page * pageSize;
+      const [rows, countResult] = await Promise.all([
+        this.db.all<DatabaseRow>(
+          'SELECT * FROM deliveries ORDER BY delivery_id LIMIT ? OFFSET ?',
+          [pageSize, offset],
+        ),
+        this.db.get<{ total: number }>('SELECT COUNT(*) as total FROM deliveries'),
+      ]);
+      return {
+        data: mapDatabaseRows<Delivery>(rows),
+        total: countResult?.total || 0,
+      };
+    } catch (error) {
+      handleDatabaseError(error);
+    }
+  }
+
+  /**
    * Get delivery by ID
    */
   async findById(id: number): Promise<Delivery | null> {

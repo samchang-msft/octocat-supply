@@ -103,6 +103,7 @@ import express from 'express';
 import { Product } from '../models/product';
 import { getProductsRepository } from '../repositories/productsRepo';
 import { NotFoundError } from '../utils/errors';
+import { parsePaginationParams } from '../utils/pagination';
 
 const router = express.Router();
 
@@ -120,9 +121,13 @@ router.post('/', async (req, res, next) => {
 // Get all products
 router.get('/', async (req, res, next) => {
   try {
+    const pagination = parsePaginationParams(req, res);
+    if (!pagination) return;
+    const { page, pageSize } = pagination;
+
     const repo = await getProductsRepository();
-    const products = await repo.findAll();
-    res.json(products);
+    const result = await repo.findAllPaginated(page, pageSize);
+    res.json({ data: result.data, page, pageSize, total: result.total });
   } catch (error) {
     next(error);
   }

@@ -103,6 +103,7 @@ import express from 'express';
 import { OrderDetail } from '../models/orderDetail';
 import { getOrderDetailsRepository } from '../repositories/orderDetailsRepo';
 import { NotFoundError } from '../utils/errors';
+import { parsePaginationParams } from '../utils/pagination';
 
 const router = express.Router();
 
@@ -120,9 +121,13 @@ router.post('/', async (req, res, next) => {
 // Get all order details
 router.get('/', async (req, res, next) => {
   try {
+    const pagination = parsePaginationParams(req, res);
+    if (!pagination) return;
+    const { page, pageSize } = pagination;
+
     const repo = await getOrderDetailsRepository();
-    const orderDetails = await repo.findAll();
-    res.json(orderDetails);
+    const result = await repo.findAllPaginated(page, pageSize);
+    res.json({ data: result.data, page, pageSize, total: result.total });
   } catch (error) {
     next(error);
   }

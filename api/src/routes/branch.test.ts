@@ -50,7 +50,11 @@ describe('Branch API', () => {
   it('should get all branches', async () => {
     const response = await request(app).get('/branches');
     expect(response.status).toBe(200);
-    expect(Array.isArray(response.body)).toBe(true);
+    expect(response.body).toHaveProperty('data');
+    expect(Array.isArray(response.body.data)).toBe(true);
+    expect(response.body).toHaveProperty('page', 0);
+    expect(response.body).toHaveProperty('pageSize', 20);
+    expect(response.body).toHaveProperty('total');
   });
 
   it('should get a branch by ID', async () => {
@@ -116,5 +120,59 @@ describe('Branch API', () => {
   it('should return 404 for non-existing branch', async () => {
     const response = await request(app).get('/branches/999');
     expect(response.status).toBe(404);
+  });
+
+  it('should support pageSize and page query parameters', async () => {
+    const response = await request(app).get('/branches?pageSize=5&page=0');
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('data');
+    expect(response.body).toHaveProperty('page', 0);
+    expect(response.body).toHaveProperty('pageSize', 5);
+    expect(response.body).toHaveProperty('total');
+  });
+
+  it('should return 400 for pageSize greater than 100', async () => {
+    const response = await request(app).get('/branches?pageSize=101');
+    expect(response.status).toBe(400);
+  });
+
+  it('should return 400 for pageSize less than 1', async () => {
+    const response = await request(app).get('/branches?pageSize=0');
+    expect(response.status).toBe(400);
+  });
+
+  it('should return 400 for negative page', async () => {
+    const response = await request(app).get('/branches?page=-1');
+    expect(response.status).toBe(400);
+  });
+
+  it('should return 400 for non-numeric pageSize', async () => {
+    const response = await request(app).get('/branches?pageSize=abc');
+    expect(response.status).toBe(400);
+  });
+
+  it('should paginate results correctly', async () => {
+    // Create 3 branches
+    const branchData = {
+      headquartersId: 1,
+      name: 'Pagination Branch',
+      description: 'Branch for pagination test',
+      address: '123 Page St',
+      contactPerson: 'Page Person',
+      email: 'page@test.com',
+      phone: '555-1111',
+    };
+    await request(app).post('/branches').send({ ...branchData, name: 'Branch A' });
+    await request(app).post('/branches').send({ ...branchData, name: 'Branch B' });
+    await request(app).post('/branches').send({ ...branchData, name: 'Branch C' });
+
+    const page0 = await request(app).get('/branches?pageSize=2&page=0');
+    expect(page0.status).toBe(200);
+    expect(page0.body.data.length).toBe(2);
+    expect(page0.body.total).toBe(3);
+
+    const page1 = await request(app).get('/branches?pageSize=2&page=1');
+    expect(page1.status).toBe(200);
+    expect(page1.body.data.length).toBe(1);
   });
 });

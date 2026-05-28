@@ -27,6 +27,28 @@ export class BranchesRepository {
   }
 
   /**
+   * Get paginated branches
+   */
+  async findAllPaginated(page: number, pageSize: number): Promise<{ data: Branch[]; total: number }> {
+    try {
+      const offset = page * pageSize;
+      const [rows, countResult] = await Promise.all([
+        this.db.all<DatabaseRow>(
+          'SELECT * FROM branches ORDER BY branch_id LIMIT ? OFFSET ?',
+          [pageSize, offset],
+        ),
+        this.db.get<{ total: number }>('SELECT COUNT(*) as total FROM branches'),
+      ]);
+      return {
+        data: mapDatabaseRows<Branch>(rows),
+        total: countResult?.total || 0,
+      };
+    } catch (error) {
+      handleDatabaseError(error);
+    }
+  }
+
+  /**
    * Get branch by ID
    */
   async findById(id: number): Promise<Branch | null> {
